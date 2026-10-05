@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Make a Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+  /* Make a Game — a workshop bench with a silly mascot sitting on it.
+     Warm paper, one purple accent, single theme on purpose. */
+  :root {
+    color-scheme: light;
+    --paper:  #fbf7f0;
+    --card:   #ffffff;
+    --ink:    #24202e;
+    --ink-2:  #6a6377;
+    --line:   #e3ddd2;
+    --purple: #6b4bd8;
+    --purple-2:#f0ecff;
+    --green:  #16a34a;
+    --amber:  #e08c00;
+    --red:    #d93a4a;
+    --code-bg:#241f36;
+    --code-fg:#f0ecff;
+    --display:"Baloo 2", system-ui, -apple-system, sans-serif;
+    --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 16px; line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  [hidden] { display: none !important; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding-inline: 16px; padding-block: 18px 36px; }
+  header.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  header.top h1 { font-size: clamp(1.4rem, 5vw, 1.9rem); font-weight: 800; margin: 0; }
+  header.top p { margin: 0; font-size: .85rem; color: var(--ink-2); font-weight: 600; }
+  .steps-pill { margin-left: auto; background: var(--purple-2); color: var(--purple); border-radius: 999px; padding: .25rem .85rem; font-size: .85rem; font-weight: 800; }
+
+  .layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,460px); gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  .card { background: var(--card); border: 2px solid var(--line); border-radius: 18px; padding: 15px; }
+  .card h2 { font-size: 1.05rem; margin: 0 0 8px; font-weight: 800; }
+
+  /* ----------------------------------------------------------- game */
+  .stage { display: grid; place-items: center; }
+  #game { width: 100%; max-width: 420px; height: auto; aspect-ratio: 3 / 4; background: #12a8e0; border-radius: 14px; border: 3px solid var(--ink); touch-action: none; display: block; }
+  .gamebar { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+  .tip { margin: 8px 0 0; font-size: .8rem; color: var(--ink-2); text-align: center; font-weight: 600; }
+
+  /* ---------------------------------------------------------- mascot */
+  .mascotrow { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .mascotavatar { width: 54px; height: 54px; flex: 0 0 auto; }
+  .mascotavatar svg { width: 100%; height: 100%; display: block; }
+  .mascotavatar.pop { animation: mpop .45s cubic-bezier(.2,1.6,.4,1); }
+  .mascotavatar.wob { animation: mwob .4s ease; }
+  @keyframes mpop { 0% { transform: scale(1); } 40% { transform: scale(1.22) rotate(-6deg); } 100% { transform: scale(1); } }
+  @keyframes mwob { 0%,100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(-6px) rotate(-6deg); } 75% { transform: translateX(6px) rotate(6deg); } }
+  .bubble { background: var(--purple-2); border: 2px solid #ddd3ff; border-radius: 14px; padding: 8px 12px; font-size: .88rem; font-weight: 700; color: var(--purple); flex: 1; min-height: 1.3em; }
+
+  /* ---------------------------------------------------------- lesson */
+  .lesson-head { display: flex; align-items: baseline; gap: 8px; }
+  .lesson-n { background: var(--purple); color: #fff; border-radius: 8px; padding: .05rem .5rem; font-size: .8rem; font-weight: 800; flex: 0 0 auto; }
+  .lesson-t { font-size: 1.1rem; font-weight: 800; }
+  .lesson-body { margin: 8px 0 0; font-size: .95rem; font-weight: 600; }
+  .lesson-body b { color: var(--purple); }
+  .lesson-body code, .goal code, .msg code { font-family: var(--mono); font-weight: 700; font-size: .88em; background: var(--purple-2); color: var(--purple); border-radius: 5px; padding: .08em .4em; }
+  .goal { margin: 10px 0 0; background: #fff8e6; border: 2px solid #f0d89a; border-radius: 12px; padding: 9px 12px; font-size: .92rem; font-weight: 700; }
+
+  /* -------------------------------------------------------- controls */
+  #controls { margin-top: 12px; }
+  .ctrlrow { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  .stepbtn {
+    appearance: none; cursor: pointer; font-family: var(--display); font-weight: 800; font-size: 1.15rem;
+    width: 46px; height: 46px; border-radius: 13px; border: 2px solid var(--line); background: #fff; color: var(--purple);
+    box-shadow: 0 3px 0 var(--line);
+  }
+  .stepbtn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--line); }
+  .ctrlval { font-family: var(--mono); font-weight: 700; font-size: 1.15rem; min-width: 56px; text-align: center; }
+  .swatch { width: 36px; height: 36px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--line); cursor: pointer; padding: 0; }
+  .swatch.on { box-shadow: 0 0 0 3px var(--purple); }
+  .emojichip {
+    font-size: 1.4rem; line-height: 1; padding: .35rem .5rem; border-radius: 11px;
+    border: 2px solid var(--line); background: #fff; cursor: pointer;
+  }
+  .emojichip.on { border-color: var(--purple); background: var(--purple-2); }
+  .boolbtn { width: 100%; }
+
+  /* ----------------------------------------------------------- code */
+  .codehead { display: flex; align-items: center; gap: 8px; margin: 12px 0 6px; }
+  .codehead span { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); font-weight: 800; }
+  #code {
+    width: 100%; min-height: 190px; resize: vertical;
+    font-family: var(--mono); font-weight: 400; font-size: .9rem; line-height: 1.75;
+    color: var(--code-fg); background: var(--code-bg);
+    border: none; border-radius: 12px; padding: 12px 14px;
+    white-space: pre; overflow-x: auto; tab-size: 2;
+  }
+  #code:focus-visible { outline: 3px solid var(--purple); outline-offset: 2px; }
+
+  .runrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+  .btn {
+    appearance: none; cursor: pointer; font-family: var(--display); font-weight: 800; font-size: .95rem;
+    color: #fff; background: var(--purple); border: none; border-radius: 12px; padding: .55rem 1.1rem;
+    box-shadow: 0 4px 0 #4a31a3; transition: transform .06s, box-shadow .06s;
+  }
+  .btn:hover { filter: brightness(1.07); }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #4a31a3; }
+  .btn.ghost { background: #fff; color: var(--ink); border: 2px solid var(--line); box-shadow: 0 4px 0 var(--line); }
+  .btn.small { font-size: .82rem; padding: .38rem .8rem; box-shadow: 0 3px 0 #4a31a3; }
+  .btn.ghost.small { box-shadow: 0 3px 0 var(--line); }
+  .btn.chaos { background: linear-gradient(100deg, #ff6b4a, #d93a4a); box-shadow: 0 4px 0 #a62533; }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  .msg { margin: 10px 0 0; border-radius: 12px; padding: 10px 12px; font-size: .9rem; font-weight: 700; }
+  .msg.ok { background: #e9f9ef; border: 2px solid #9bdcb4; color: #11703c; }
+  .msg.err { background: #fdecee; border: 2px solid #f3b6be; color: #a11d2c; }
+  .msg.info { background: #eef1f8; border: 2px solid var(--line); color: var(--ink-2); }
+
+  /* ----------------------------------------------------------- map */
+  .track { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+  .dot {
+    appearance: none; cursor: pointer; width: 30px; height: 30px; border-radius: 9px;
+    border: 2px solid var(--line); background: #fff; font-family: var(--display); font-weight: 800; font-size: .8rem; color: var(--ink-2);
+  }
+  .dot.done { background: var(--green); border-color: var(--green); color: #fff; }
+  .dot.now { border-color: var(--purple); color: var(--purple); box-shadow: 0 0 0 3px var(--purple-2); }
+  .dot:disabled { opacity: .4; cursor: default; }
+
+  footer.foot { margin-top: 22px; text-align: center; font-size: .8rem; color: var(--ink-2); font-weight: 600; }
+  .celebrate {
+    position: fixed; left: 50%; top: 40%; transform: translate(-50%,-50%);
+    font-size: 2.2rem; font-weight: 800; color: var(--green); pointer-events: none; z-index: 40;
+    animation: up 1.1s ease-out forwards;
+  }
+  @keyframes up {
+    0% { opacity: 0; transform: translate(-50%,-20%) scale(.6); }
+    25% { opacity: 1; transform: translate(-50%,-55%) scale(1.15); }
+    100% { opacity: 0; transform: translate(-50%,-110%) scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .celebrate, .mascotavatar.pop, .mascotavatar.wob { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Make a Game 🕹️</h1>
+      <p>Tap stuff. Watch the code change itself. That's the whole trick.</p>
+    </div>
+    <span class="steps-pill" id="stepPill">Step 1 of 12</span>
+  </header>
+
+  <div class="layout">
+    <div class="card">
+      <h2>Your game</h2>
+      <div class="stage"><canvas id="game" width="360" height="480"></canvas></div>
+      <div class="gamebar">
+        <button class="btn small" id="playBtn">▶ Play</button>
+        <button class="btn ghost small" id="restartBtn">Restart</button>
+      </div>
+      <p class="tip">Arrow keys move you — or just drag your finger across the game.</p>
+    </div>
+
+    <div class="card">
+      <div class="mascotrow">
+        <div class="mascotavatar" id="mascotAvatar"></div>
+        <div class="bubble" id="speechText">Hiya!</div>
+      </div>
+
+      <div class="lesson-head">
+        <span class="lesson-n" id="lessonN">1</span>
+        <span class="lesson-t" id="lessonT">Step</span>
+      </div>
+      <p class="lesson-body" id="lessonB"></p>
+      <p class="goal" id="lessonG"></p>
+
+      <div id="controls"></div>
+
+      <div class="codehead"><span>The actual code</span></div>
+      <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Game code"></textarea>
+
+      <div class="runrow">
+        <button class="btn" id="runBtn">▶ Run it</button>
+        <button class="btn ghost small" id="showBtn">Show me</button>
+        <button class="btn ghost small" id="undoBtn">Put it back</button>
+        <button class="btn chaos small" id="chaosBtn">🎉 CHAOS</button>
+      </div>
+      <div id="msg"></div>
+      <div class="track" id="track"></div>
+    </div>
+  </div>
+
+  <footer class="foot">Everything saves in this browser. Nothing is sent anywhere.</footer>
+</div>
+
+<script>
+/* ==================================================================
+   Make a Game
+
+   A real, playable catch-the-falling-stuff game whose settings ARE the
+   code you edit. Big tap buttons change the code for you (and you can
+   still type), the game restarts instantly, and a blob mascot reacts
+   to whatever just happened. Cause and effect, one second apart.
+   ================================================================== */
+
+const $ = (id) => document.getElementById(id);
+const pickOne = (a) => a[Math.floor(Math.random() * a.length)];
+const shuffle = (a) => {
+  const x = a.slice();
+  for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; }
+  return x;
+};
+
+/* --------------------------------------------------------- settings */
+const DEFAULTS = {
+  playerSize: 60, playerColor: 'blue', playerSpeed: 7,
+  fallSpeed: 2, spawnEvery: 55, pointsPerCatch: 1, startLives: 3,
+  fallingThings: ['🍎'], showScore: true, skyColor: 'skyblue',
+};
+const NUMBERS = ['playerSize', 'playerSpeed', 'fallSpeed', 'spawnEvery', 'pointsPerCatch', 'startLives'];
+const TEXTS = ['playerColor', 'skyColor'];
+const FLAGS = ['showScore'];
+const LISTS = ['fallingThings'];
+const ALL_KEYS = NUMBERS.concat(TEXTS, FLAGS, LISTS);
+const LIMITS = { playerSize: [20, 160], playerSpeed: [1, 20], fallSpeed: [1, 14], spawnEvery: [8, 200], pointsPerCatch: [1, 100], startLives: [1, 9] };
+
+const COLORS = {
+  blue: '#2f6fe0', red: '#e03b3b', green: '#1fa84f', yellow: '#f2c024',
+  purple: '#8b4fe0', orange: '#f2802e', pink: '#ec5fa8', black: '#23202e',
+  white: '#ffffff', skyblue: '#12a8e0', midnight: '#1b1a3a', sunset: '#f2794b',
+  mint: '#37c9a7', lava: '#c92d2d', slime: '#8bc92d', bubblegum: '#ff8fd1',
+};
+const SWATCHES = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'black', 'sunset', 'bubblegum'];
+const EMOJI_CHOICES = ['🍎', '⭐', '🍌', '🍕', '🍩', '👻', '👽', '💩', '🧦', '🦄'];
+
+/* ------------------------------------------------------- the lessons */
+const LESSONS = [
+  { t: 'Say hi to your game', ctrl: { type: 'none' },
+    b: 'This is a real game and it already works. Press <b>▶ Play</b> and catch a few apples. They are not dangerous. Probably.',
+    g: "Goal: just press Play. You're already winning.",
+    check: () => true },
+  { t: 'Biggie size it', ctrl: { type: 'number', key: 'playerSize', step: 10 },
+    b: 'See <code>playerSize = 60</code>? That is how wide your basket is. Tap <b>+10</b> a few times and watch the code line change by itself.',
+    g: 'Goal: get playerSize to 90 or more.',
+    check: (c) => c.playerSize >= 90, hint: 'playerSize = 100' },
+  { t: 'Paint your basket', ctrl: { type: 'color', key: 'playerColor' },
+    b: 'Computers are fussy: words need "quote marks" around them. Tap a colour below instead of typing — the code updates itself.',
+    g: 'Goal: any colour except blue.',
+    check: (c) => c.playerColor !== 'blue', hint: 'playerColor = "red"' },
+  { t: 'Turn up the heat', ctrl: { type: 'number', key: 'fallSpeed', step: 1 },
+    b: '<code>fallSpeed</code> is how fast things drop. Bigger number, faster apples, harder game. You brave enough?',
+    g: 'Goal: fallSpeed 4 or more.',
+    check: (c) => c.fallSpeed >= 4, hint: 'fallSpeed = 5' },
+  { t: 'The sneaky one', ctrl: { type: 'number', key: 'spawnEvery', step: 5 },
+    b: '<code>spawnEvery</code> is the gap between apples. Here is the trick: a SMALLER number means MORE apples. Backwards, right?',
+    g: 'Goal: spawnEvery 30 or less.',
+    check: (c) => c.spawnEvery <= 30, hint: 'spawnEvery = 25' },
+  { t: 'Fill the sky with snacks', ctrl: { type: 'list' },
+    b: 'Those square brackets make a <b>list</b> — a box that holds lots of things, separated by commas. Tap a few emoji to toss them in.',
+    g: 'Goal: have 3 or more things falling.',
+    check: (c) => c.fallingThings.length >= 3, hint: 'fallingThings = ["🍎", "⭐", "🍌"]' },
+  { t: 'Get greedy', ctrl: { type: 'number', key: 'pointsPerCatch', step: 5 },
+    b: '<code>pointsPerCatch</code> is how much each catch is worth. Why be modest about it?',
+    g: 'Goal: pointsPerCatch 10 or more.',
+    check: (c) => c.pointsPerCatch >= 10, hint: 'pointsPerCatch = 10' },
+  { t: 'Yes, no, nothing in between', ctrl: { type: 'bool' },
+    b: 'Some settings are just on or off — written as <code>true</code> or <code>false</code>, no quote marks. Tap to hide the score, then tap again to bring it back.',
+    g: 'Goal: turn showScore off, then back on.',
+    check: (c) => c.showScore === true && seenFalse },
+  { t: 'Paint the sky', ctrl: { type: 'color', key: 'skyColor' },
+    b: 'Same trick as the basket — tap a colour for <code>skyColor</code> this time.',
+    g: 'Goal: any colour except skyblue.',
+    check: (c) => c.skyColor !== 'skyblue', hint: 'skyColor = "midnight"' },
+  { t: 'Teach it a trick', ctrl: { type: 'rule', hint: 'if score > 20 then fallSpeed = 8' },
+    b: 'Here is the big one. <code>if score > 20 then fallSpeed = 8</code> — the game keeps checking this WHILE you play, and the moment it is true, it does the bit after <b>then</b>.',
+    g: 'Goal: add a rule that speeds things up once you score 20.',
+    check: (c, rules) => rules.some((r) => r.key === 'score' && r.set === 'fallSpeed'), hint: 'if score > 20 then fallSpeed = 8' },
+  { t: 'One more trick', ctrl: { type: 'rule', hint: 'if score > 40 then spawnEvery = 20' },
+    b: 'You can stack as many rules as you like, one per line. Add a second one for extra chaos later in the game.',
+    g: 'Goal: have 2 rules or more.',
+    check: (c, rules) => rules.length >= 2, hint: 'if score > 40 then spawnEvery = 20' },
+  { t: "It's yours now", ctrl: { type: 'none' },
+    b: 'Numbers, "words", true/false, lists, and if-rules — that is most of what coding actually is. Hit the CHAOS button, or build whatever you want. You cannot break it.',
+    g: 'No goal. Make something silly and show someone.',
+    check: () => true },
+];
+
+/* ------------------------------------------------------------ state */
+const SK = 'makeagame.v2';
+let step = 0, savedCode = null;
+try {
+  const r = JSON.parse(localStorage.getItem(SK) || '{}');
+  if (typeof r.step === 'number') step = Math.max(0, Math.min(LESSONS.length - 1, r.step));
+  if (typeof r.code === 'string') savedCode = r.code;
+} catch (e) { /* first visit */ }
+const persist = () => { try { localStorage.setItem(SK, JSON.stringify({ step, code: $('code').value })); } catch (e) {} };
+
+let cfg = Object.assign({}, DEFAULTS);
+let rules = [];
+let seenFalse = false;
+
+/* ------------------------------------------------------ the parser */
+function defaultCode() {
+  return [
+    'playerSize = 60', 'playerColor = "blue"', 'playerSpeed = 7', '',
+    'fallSpeed = 2', 'spawnEvery = 55', 'pointsPerCatch = 1', 'startLives = 3', '',
+    'fallingThings = ["🍎"]', 'showScore = true', 'skyColor = "skyblue"',
+  ].join('\n');
+}
+
+// Reads "name = value" lines and "if score > N then name = value" rules.
+// Anything it cannot read becomes a friendly message, never a crash.
+function parseCode(src) {
+  const out = Object.assign({}, DEFAULTS);
+  const newRules = [];
+  const problems = [];
+  const lines = src.split('\n');
+
+  lines.forEach((raw, i) => {
+    const line = raw.trim();
+    const n = i + 1;
+    if (!line || line.startsWith('//')) return;
+
+    const rule = line.match(/^if\s+(\w+)\s*(>|<|>=|<=|==)\s*(-?\d+)\s+then\s+(\w+)\s*=\s*(.+)$/i);
+    if (rule) {
+      const [, key, op, num, target, valRaw] = rule;
+      if (key !== 'score' && key !== 'lives') { problems.push('Line ' + n + ': a rule can watch <code>score</code> or <code>lives</code>, not <code>' + key + '</code>.'); return; }
+      if (!ALL_KEYS.includes(target)) { problems.push('Line ' + n + ': there is no setting called <code>' + target + '</code>.'); return; }
+      const v = readValue(valRaw.trim(), target, n, problems);
+      if (v === undefined) return;
+      newRules.push({ key, op, num: Number(num), set: target, val: v });
+      return;
+    }
+    if (/^if\b/i.test(line)) { problems.push('Line ' + n + ': a rule looks like <code>if score > 20 then fallSpeed = 8</code>. Check the word <b>then</b> is there.'); return; }
+
+    const m = line.match(/^(\w+)\s*=\s*(.+)$/);
+    if (!m) { problems.push('Line ' + n + ': I could not read this. Lines look like <code>name = value</code>.'); return; }
+    const [, name, valRaw] = m;
+    if (!ALL_KEYS.includes(name)) { problems.push('Line ' + n + ': there is no setting called <code>' + name + '</code>. Check the spelling.'); return; }
+    const v = readValue(valRaw.trim(), name, n, problems);
+    if (v !== undefined) out[name] = v;
+  });
+
+  return { cfg: out, rules: newRules, problems };
+}
+
+function readValue(raw, name, line, problems) {
+  if (LISTS.includes(name)) {
+    const m = raw.match(/^\[(.*)\]$/s);
+    if (!m) { problems.push('Line ' + line + ': a list needs square brackets, like <code>["🍎", "⭐"]</code>.'); return undefined; }
+    const inner = m[1].trim();
+    const items = inner.split(',').map((s) => s.trim()).filter(Boolean).map((s) => s.replace(/^["']|["']$/g, ''));
+    if (!items.length) { problems.push('Line ' + line + ': the list is empty — put at least one thing in it.'); return undefined; }
+    return items.slice(0, 8);
+  }
+  if (FLAGS.includes(name)) {
+    if (/^true$/i.test(raw)) return true;
+    if (/^false$/i.test(raw)) return false;
+    problems.push('Line ' + line + ': <code>' + name + '</code> must be <code>true</code> or <code>false</code> — no quote marks.');
+    return undefined;
+  }
+  if (TEXTS.includes(name)) {
+    const q = raw.match(/^"(.*)"$|^'(.*)'$/);
+    if (!q) { problems.push('Line ' + line + ': words need quote marks round them, like <code>"red"</code>.'); return undefined; }
+    const word = (q[1] != null ? q[1] : q[2]).trim().toLowerCase();
+    if (!COLORS[word]) { problems.push('Line ' + line + ': I do not know the colour <code>' + word + '</code>. Try: ' + Object.keys(COLORS).join(', ') + '.'); return undefined; }
+    return word;
+  }
+  if (/^-?\d+(\.\d+)?$/.test(raw)) {
+    let v = Number(raw);
+    const lim = LIMITS[name];
+    if (lim) {
+      if (v < lim[0]) { problems.push('Line ' + line + ': <code>' + name + '</code> has to be at least ' + lim[0] + '. I used ' + lim[0] + '.'); v = lim[0]; }
+      if (v > lim[1]) { problems.push('Line ' + line + ': <code>' + name + '</code> can be at most ' + lim[1] + '. I used ' + lim[1] + '.'); v = lim[1]; }
+    }
+    return v;
+  }
+  if (/^".*"$|^'.*'$/.test(raw)) { problems.push('Line ' + line + ': <code>' + name + '</code> wants a number, so take the quote marks off.'); return undefined; }
+  problems.push('Line ' + line + ': <code>' + raw + '</code> is not a number.');
+  return undefined;
+}
+
+/* --------------------------------------------------------- the game */
+const cv = $('game');
+const ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+let G = null;
+const keys = new Set();
+const bits = [];
+
+function newGame() {
+  G = { px: W / 2, py: H - 46, score: 0, lives: cfg.startLives, items: [], t: 0, over: false, started: false, chompT: 0, live: Object.assign({}, cfg) };
+}
+
+function applyRules() {
+  G.live = Object.assign({}, cfg);
+  for (const r of rules) {
+    const now = r.key === 'score' ? G.score : G.lives;
+    let hit = false;
+    switch (r.op) {
+      case '>': hit = now > r.num; break;
+      case '<': hit = now < r.num; break;
+      case '>=': hit = now >= r.num; break;
+      case '<=': hit = now <= r.num; break;
+      case '==': hit = now === r.num; break;
+    }
+    if (hit) G.live[r.set] = r.val;
+  }
+}
+
+const CATCH_WORDS = ['Nom!', 'Yoink!', 'Tasty!', 'Gulp!', 'Yum!'];
+const MISS_WORDS = ['Oof!', 'Splat!', 'Noo!', 'Oopsie!'];
+
+function step_() {
+  if (!G || G.over || !G.started) return;
+  applyRules();
+  const L = G.live;
+  G.t++;
+  if (G.chompT > 0) G.chompT--;
+
+  if (keys.has('left')) G.px -= L.playerSpeed;
+  if (keys.has('right')) G.px += L.playerSpeed;
+  const half = L.playerSize / 2;
+  G.px = Math.max(half, Math.min(W - half, G.px));
+
+  if (G.t % Math.max(6, Math.round(L.spawnEvery)) === 0) {
+    const pool = L.fallingThings.length ? L.fallingThings : ['🍎'];
+    G.items.push({ x: 24 + Math.random() * (W - 48), y: -24, face: pool[Math.floor(Math.random() * pool.length)] });
+  }
+
+  for (let i = G.items.length - 1; i >= 0; i--) {
+    const it = G.items[i];
+    it.y += L.fallSpeed;
+    const caught = it.y > G.py - 18 && it.y < G.py + 26 && Math.abs(it.x - G.px) < half + 14;
+    if (caught) {
+      G.items.splice(i, 1);
+      G.score += L.pointsPerCatch;
+      G.chompT = 8;
+      pop(it.x, it.y, '#ffe680');
+      if (Math.random() < 0.4) popWord(it.x, it.y - 10, pickOne(CATCH_WORDS), '#fff8e6');
+      continue;
+    }
+    if (it.y > H + 24) {
+      G.items.splice(i, 1);
+      G.lives--;
+      pop(it.x, H - 10, '#ff6b6b');
+      popWord(it.x, H - 30, pickOne(MISS_WORDS), '#fff');
+      if (G.lives <= 0) G.over = true;
+    }
+  }
+
+  for (let i = bits.length - 1; i >= 0; i--) {
+    const b = bits[i];
+    b.x += b.vx; b.y += b.vy; b.vy += .35; b.life--;
+    if (b.life <= 0) bits.splice(i, 1);
+  }
+}
+
+function pop(x, y, c) { for (let i = 0; i < 8; i++) bits.push({ x, y, vx: (Math.random() - .5) * 5, vy: -Math.random() * 4, life: 24, c }); }
+function popWord(x, y, word, c) { bits.push({ x, y, vx: (Math.random() - .5) * 1, vy: -1.4, life: 34, c, word }); }
+
+function draw() {
+  const L = (G && G.live) || cfg;
+  ctx.fillStyle = COLORS[L.skyColor] || COLORS.skyblue;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(0,0,0,.14)';
+  ctx.fillRect(0, H - 18, W, 18);
+  if (!G) return;
+
+  for (const it of G.items) {
+    ctx.font = '26px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(it.face, it.x, it.y);
+  }
+  for (const b of bits) {
+    ctx.globalAlpha = Math.max(0, b.life / 30);
+    if (b.word) {
+      ctx.font = 'bold 15px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = b.c;
+      ctx.fillText(b.word, b.x, b.y);
+    } else {
+      ctx.fillStyle = b.c; ctx.fillRect(b.x, b.y, 4, 4);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  const w = L.playerSize, h = (G.chompT > 0 ? 16 : 22);
+  ctx.fillStyle = COLORS[L.playerColor] || COLORS.blue;
+  roundRect(G.px - w / 2, G.py + (22 - h), w, h, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.35)';
+  roundRect(G.px - w / 2 + 4, G.py + (22 - h) + 3, w - 8, 5, 3); ctx.fill();
+
+  if (L.showScore) {
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 4;
+    ctx.font = 'bold 22px system-ui'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.strokeText('Score ' + G.score, 12, 12); ctx.fillText('Score ' + G.score, 12, 12);
+    ctx.textAlign = 'right';
+    const hearts = '♥'.repeat(Math.max(0, G.lives));
+    ctx.strokeText(hearts, W - 12, 12);
+    ctx.fillStyle = '#ff7b8a'; ctx.fillText(hearts, W - 12, 12);
+  }
+  if (!G.started) banner('Press Play');
+  else if (G.over) banner('Game over — score ' + G.score);
+}
+
+function banner(text) {
+  ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, H / 2 - 36, W, 72);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 24px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, W / 2, H / 2);
+}
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function loop() { step_(); draw(); requestAnimationFrame(loop); }
+
+/* ---------------------------------------------------------- input */
+addEventListener('keydown', (e) => {
+  if (['ArrowLeft', 'a', 'A'].includes(e.key)) { keys.add('left'); e.preventDefault(); }
+  if (['ArrowRight', 'd', 'D'].includes(e.key)) { keys.add('right'); e.preventDefault(); }
+});
+addEventListener('keyup', (e) => {
+  if (['ArrowLeft', 'a', 'A'].includes(e.key)) keys.delete('left');
+  if (['ArrowRight', 'd', 'D'].includes(e.key)) keys.delete('right');
+});
+addEventListener('blur', () => keys.clear());
+function pointerTo(clientX) { if (!G) return; const r = cv.getBoundingClientRect(); G.px = ((clientX - r.left) / r.width) * W; }
+let dragging = false;
+cv.addEventListener('pointerdown', (e) => { dragging = true; pointerTo(e.clientX); cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', (e) => { if (dragging) pointerTo(e.clientX); });
+cv.addEventListener('pointerup', () => { dragging = false; });
+cv.addEventListener('pointercancel', () => { dragging = false; });
+
+/* -------------------------------------------------------------- mascot */
+function mascotSvg(hex, mood) {
+  const eyes = mood === 'yikes'
+    ? '<circle cx="38" cy="52" r="5" fill="#1b1030"/><circle cx="62" cy="52" r="5" fill="#1b1030"/>'
+    : mood === 'happy'
+      ? '<path d="M32 50 q6 -8 12 0" stroke="#1b1030" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M56 50 q6 -8 12 0" stroke="#1b1030" stroke-width="4" fill="none" stroke-linecap="round"/>'
+      : '<circle cx="38" cy="50" r="6" fill="#1b1030"/><circle cx="62" cy="50" r="6" fill="#1b1030"/><circle cx="40" cy="48" r="2" fill="#fff"/><circle cx="64" cy="48" r="2" fill="#fff"/>';
+  const mouth = mood === 'yikes'
+    ? '<path d="M40 72 q10 -8 20 0" stroke="#1b1030" stroke-width="4" fill="none" stroke-linecap="round"/>'
+    : mood === 'happy'
+      ? '<path d="M36 64 q14 16 28 0" stroke="#1b1030" stroke-width="4" fill="none" stroke-linecap="round"/>'
+      : '<path d="M42 66 q8 7 16 0" stroke="#1b1030" stroke-width="4" fill="none" stroke-linecap="round"/>';
+  return '<svg viewBox="0 0 100 100" aria-hidden="true">' +
+    '<ellipse cx="50" cy="92" rx="26" ry="5" fill="rgba(0,0,0,.18)"/>' +
+    '<path d="M50 10 C24 10 16 34 16 54 C16 76 31 88 50 88 C69 88 84 76 84 54 C84 34 76 10 50 10 Z" fill="' + hex + '"/>' +
+    eyes + mouth + '</svg>';
+}
+function setMascot(mood, line) {
+  const hex = COLORS[cfg.playerColor] || COLORS.blue;
+  const el = $('mascotAvatar');
+  el.innerHTML = mascotSvg(hex, mood);
+  el.className = 'mascotavatar' + (mood === 'happy' ? ' pop' : mood === 'yikes' ? ' wob' : '');
+  if (line) $('speechText').textContent = line;
+}
+const IDLE_LINES = ["Ready when you are!", "Let's make something!", 'Poke the code — I dare you.'];
+const ADVANCE_LINES = ['Boom! Next!', 'Easy. NEXT.', "You're basically a hacker now.", 'Look at you go!', "That's the stuff.", '10/10, no notes.', 'Nailed it!'];
+const ERROR_LINES = ['Hmm, not quite — check below!', 'Oop, read the note below.', 'So close! Peek at the hint.', 'Computers are picky like that.'];
+const PROGRESS_LINES = ['Getting there...', 'Keep going!', 'Almost!'];
+const FREEPLAY_LINES = ['Go wild.', "You're the boss now.", 'Break it. (You really cannot.)', "Ooh what's this do..."];
+
+/* ---------------------------------------------------------- controls */
+function setLineValue(name, exprText) {
+  const ta = $('code');
+  const lines = ta.value.split('\n');
+  let found = false;
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (t.startsWith(name + ' ') || t.startsWith(name + '=')) { lines[i] = name + ' = ' + exprText; found = true; break; }
+  }
+  if (!found) lines.push(name + ' = ' + exprText);
+  ta.value = lines.join('\n');
+  runCode();
+}
+function bump(key, delta) {
+  const cur = Number(cfg[key]) || 0;
+  let next = cur + delta;
+  const lim = LIMITS[key];
+  if (lim) next = Math.max(lim[0], Math.min(lim[1], next));
+  setLineValue(key, String(next));
+}
+function setColorLine(key, name) { setLineValue(key, '"' + name + '"'); }
+function toggleBoolLine(key) { setLineValue(key, String(!cfg[key])); }
+function toggleEmojiLine(e) {
+  let list = (cfg.fallingThings || []).slice();
+  const i = list.indexOf(e);
+  if (i >= 0) list.splice(i, 1); else list.push(e);
+  if (!list.length) list = [e];
+  setLineValue('fallingThings', '[' + list.map((x) => '"' + x + '"').join(', ') + ']');
+}
+
+function renderControls(ctrl) {
+  const wrap = $('controls');
+  wrap.innerHTML = '';
+  if (!ctrl || ctrl.type === 'none') { wrap.hidden = true; return; }
+  wrap.hidden = false;
+
+  if (ctrl.type === 'number') {
+    const row = document.createElement('div'); row.className = 'ctrlrow';
+    const minus = document.createElement('button'); minus.className = 'stepbtn'; minus.textContent = '−' + ctrl.step;
+    minus.addEventListener('click', () => bump(ctrl.key, -ctrl.step));
+    const val = document.createElement('span'); val.className = 'ctrlval'; val.textContent = cfg[ctrl.key];
+    const plus = document.createElement('button'); plus.className = 'stepbtn'; plus.textContent = '+' + ctrl.step;
+    plus.addEventListener('click', () => bump(ctrl.key, ctrl.step));
+    row.append(minus, val, plus); wrap.appendChild(row);
+  } else if (ctrl.type === 'color') {
+    const row = document.createElement('div'); row.className = 'ctrlrow';
+    for (const name of SWATCHES) {
+      const b = document.createElement('button');
+      b.className = 'swatch' + (cfg[ctrl.key] === name ? ' on' : '');
+      b.style.background = COLORS[name]; b.title = name; b.setAttribute('aria-label', name);
+      b.addEventListener('click', () => setColorLine(ctrl.key, name));
+      row.appendChild(b);
+    }
+    wrap.appendChild(row);
+  } else if (ctrl.type === 'bool') {
+    const b = document.createElement('button');
+    b.className = 'btn ghost boolbtn';
+    b.textContent = cfg.showScore ? '👀 Score is ON — tap to hide it' : '🙈 Score is OFF — tap to show it';
+    b.addEventListener('click', () => toggleBoolLine('showScore'));
+    wrap.appendChild(b);
+  } else if (ctrl.type === 'list') {
+    const row = document.createElement('div'); row.className = 'ctrlrow';
+    for (const e of EMOJI_CHOICES) {
+      const on = (cfg.fallingThings || []).includes(e);
+      const b = document.createElement('button');
+      b.className = 'emojichip' + (on ? ' on' : ''); b.textContent = e;
+      b.addEventListener('click', () => toggleEmojiLine(e));
+      row.appendChild(b);
+    }
+    wrap.appendChild(row);
+  } else if (ctrl.type === 'rule') {
+    const b = document.createElement('button');
+    b.className = 'btn'; b.textContent = '✨ Add this rule for me';
+    b.addEventListener('click', () => { $('code').value = $('code').value.replace(/\s*$/, '') + '\n' + ctrl.hint + '\n'; runCode(); });
+    wrap.appendChild(b);
+  }
+}
+
+/* --------------------------------------------------------- lessons */
+function paintLesson() {
+  const L = LESSONS[step];
+  $('lessonN').textContent = step + 1;
+  $('lessonT').textContent = L.t;
+  $('lessonB').innerHTML = L.b;
+  $('lessonG').innerHTML = L.g;
+  $('stepPill').textContent = 'Step ' + (step + 1) + ' of ' + LESSONS.length;
+  $('showBtn').hidden = !L.hint;
+  renderControls(L.ctrl);
+
+  const tr = $('track');
+  tr.innerHTML = '';
+  LESSONS.forEach((_, i) => {
+    const b = document.createElement('button');
+    b.className = 'dot' + (i < step ? ' done' : '') + (i === step ? ' now' : '');
+    b.textContent = i + 1; b.disabled = i > step;
+    b.addEventListener('click', () => { step = i; persist(); paintLesson(); });
+    tr.appendChild(b);
+  });
+}
+
+function say(kind, html) { $('msg').innerHTML = '<div class="msg ' + kind + '">' + html + '</div>'; }
+
+function runCode() {
+  const res = parseCode($('code').value);
+  cfg = res.cfg; rules = res.rules;
+  if (cfg.showScore === false) seenFalse = true;
+  persist();
+  newGame(); G.started = true;
+  renderControls(LESSONS[step].ctrl);
+
+  if (res.problems.length) {
+    say('err', '<b>Something needs a look:</b><br>' + res.problems.slice(0, 4).join('<br>'));
+    setMascot('yikes', pickOne(ERROR_LINES));
+    return;
+  }
+
+  const L = LESSONS[step];
+  const done = L.check(cfg, rules);
+  if (done) {
+    if (step < LESSONS.length - 1) {
+      celebrate();
+      say('ok', '<b>That worked!</b>');
+      setMascot('happy', pickOne(ADVANCE_LINES));
+      step++; persist(); paintLesson();
+    } else {
+      say('ok', '<b>Your game, your rules.</b> Keep changing things — it saves as you go.');
+      setMascot('happy', pickOne(FREEPLAY_LINES));
+    }
+  } else {
+    say('info', 'Game updated. ' + L.g.replace(/^Goal: /, 'Still to do: '));
+    setMascot('idle', pickOne(PROGRESS_LINES));
+  }
+}
+
+function celebrate() {
+  const el = document.createElement('div'); el.className = 'celebrate'; el.textContent = '✓ Nice!';
+  document.body.appendChild(el); setTimeout(() => el.remove(), 1100);
+}
+
+/* --------------------------------------------------------------- chaos */
+function chaos() {
+  const sizes = [30, 50, 70, 90, 110, 140];
+  const speeds = [2, 3, 4, 5, 6, 8, 10];
+  const spawns = [10, 15, 20, 30, 45];
+  const pts = [1, 5, 10, 20, 50];
+  const emoji = shuffle(EMOJI_CHOICES).slice(0, 2 + Math.floor(Math.random() * 4));
+  const lines = [
+    'playerSize = ' + pickOne(sizes),
+    'playerColor = "' + pickOne(SWATCHES) + '"',
+    'playerSpeed = ' + (3 + Math.floor(Math.random() * 10)), '',
+    'fallSpeed = ' + pickOne(speeds),
+    'spawnEvery = ' + pickOne(spawns),
+    'pointsPerCatch = ' + pickOne(pts),
+    'startLives = ' + (1 + Math.floor(Math.random() * 5)), '',
+    'fallingThings = [' + emoji.map((e) => '"' + e + '"').join(', ') + ']',
+    'showScore = ' + (Math.random() < 0.5 ? 'true' : 'false'),
+    'skyColor = "' + pickOne(SWATCHES) + '"',
+  ];
+  $('code').value = lines.join('\n');
+  runCode();
+  setMascot('happy', pickOne(['CHAOS!', 'Hold onto your hat!', 'This is fine. 🔥', 'Whoa.']));
+}
+
+/* ------------------------------------------------------------ wire */
+$('code').value = savedCode || defaultCode();
+$('runBtn').addEventListener('click', runCode);
+$('chaosBtn').addEventListener('click', chaos);
+$('playBtn').addEventListener('click', () => { if (!G) newGame(); if (G.over) newGame(); G.started = true; cv.focus(); });
+$('restartBtn').addEventListener('click', () => { newGame(); G.started = true; });
+$('undoBtn').addEventListener('click', () => {
+  if (!confirm('Put the code back to how it started? You will lose your changes.')) return;
+  $('code').value = defaultCode(); runCode();
+});
+$('showBtn').addEventListener('click', () => {
+  const L = LESSONS[step];
+  if (!L.hint) return;
+  say('info', 'Try this line: <code>' + L.hint.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])) + '</code>');
+});
+
+const first = parseCode($('code').value);
+cfg = first.cfg; rules = first.rules;
+newGame();
+setMascot('idle', pickOne(IDLE_LINES));
+paintLesson();
+loop();
+</script>
+</body>
+</html>
