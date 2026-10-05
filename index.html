@@ -148,6 +148,29 @@
     25% { opacity: 1; transform: translate(-50%,-55%) scale(1.15); }
     100% { opacity: 0; transform: translate(-50%,-110%) scale(1); }
   }
+
+  /* -------------------------------------------------------- revive */
+  .revivewrap { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(36, 32, 46, .68); }
+  .revivecard {
+    width: min(420px, 100%); background: var(--card); border: 3px solid var(--purple); border-radius: 18px;
+    padding: 18px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 16px 40px rgba(0,0,0,.35);
+  }
+  .revivecard h2 { margin: 0; font-size: 1.2rem; font-weight: 800; }
+  .revivecard p { margin: 0; font-size: .9rem; color: var(--ink-2); font-weight: 600; }
+  .ansbtn {
+    appearance: none; cursor: pointer; text-align: left; font: inherit; font-weight: 700; font-size: .92rem;
+    color: var(--ink); background: #fff; border: 2px solid var(--line); border-radius: 11px; padding: .6rem .8rem;
+  }
+  .ansbtn:hover:not(:disabled) { border-color: var(--purple); background: var(--purple-2); }
+  .ansbtn.right { border-color: var(--green); background: #e9f9ef; }
+  .ansbtn.wrong { border-color: var(--red); background: #fdecee; }
+  .ansbtn:disabled { cursor: default; }
+  #reviveInput {
+    width: 100%; font-family: var(--mono); font-size: .9rem; color: var(--code-fg); background: var(--code-bg);
+    border: none; border-radius: 10px; padding: 10px 12px;
+  }
+  #reviveInput:focus-visible { outline: 3px solid var(--purple); outline-offset: 2px; }
+
   @media (prefers-reduced-motion: reduce) {
     .celebrate, .mascotavatar.pop, .mascotavatar.wob { animation: none; }
   }
@@ -206,6 +229,33 @@
   <footer class="foot">Everything saves in this browser. Nothing is sent anywhere.</footer>
 </div>
 
+<div class="revivewrap" id="reviveWrap" hidden>
+  <div class="revivecard">
+    <div id="reviveChoice">
+      <h2>💔 Out of hearts!</h2>
+      <p>Get one thing right and I'll hand you a heart back. Pick one:</p>
+      <button class="btn" id="reviveQuizBtn">📝 Quick Question</button>
+      <button class="btn ghost" id="reviveCodeBtn">⌨️ Write a line of code</button>
+    </div>
+    <div id="reviveQuiz" hidden>
+      <h2>📝 Quick Question</h2>
+      <p id="reviveQText"></p>
+      <div id="reviveOpts" style="display:flex;flex-direction:column;gap:7px"></div>
+    </div>
+    <div id="reviveCode" hidden>
+      <h2>⌨️ Write a line of code</h2>
+      <p id="reviveCText"></p>
+      <input id="reviveInput" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="type here...">
+      <div class="runrow"><button class="btn" id="reviveCheckBtn">Check it</button></div>
+    </div>
+    <div id="reviveResult" hidden>
+      <h2 id="reviveResTitle"></h2>
+      <p id="reviveResText"></p>
+      <button class="btn" id="reviveContinueBtn">Keep playing</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ==================================================================
    Make a Game
@@ -245,6 +295,26 @@ const COLORS = {
 };
 const SWATCHES = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'black', 'sunset', 'bubblegum'];
 const EMOJI_CHOICES = ['🍎', '⭐', '🍌', '🍕', '🍩', '👻', '👽', '💩', '🧦', '🦄'];
+
+/* --------------------------------------------------- revive challenges */
+const REVIVE_QUIZ = [
+  { q: 'Which of these needs quote marks around it?', opts: ['A word, like red', 'A number, like 5', 'true or false', 'Nothing needs quotes'], c: 0, why: 'Words need "quotes". Numbers and true/false do not.' },
+  { q: 'What does playerSize = 60 actually do?', opts: ['Puts 60 into a box called playerSize', 'Makes the game 60 seconds long', 'Deletes the player', "It's just a comment"], c: 0, why: 'The = sign puts a value into a named box — that box is a variable.' },
+  { q: 'In fallingThings = ["🍎", "⭐"], what are the [ ] for?', opts: ['Making a list of things', 'Making text bold', 'Making a number', "They don't do anything"], c: 0, why: 'Square brackets make a list — lots of things kept in one box.' },
+  { q: 'What does true or false usually control?', opts: ['Whether something is on or off', 'How big something is', 'What colour something is', 'How many things are in a list'], c: 0, why: 'true/false settings are simple switches — on or off, nothing in between.' },
+  { q: 'In if score > 20 then fallSpeed = 8, when does fallSpeed become 8?', opts: ['The moment your score passes 20', 'Right at the start', 'Never', 'Only if you press a button'], c: 0, why: 'The game keeps checking the rule while you play, and acts the instant it becomes true.' },
+  { q: 'Which of these is written correctly?', opts: ['skyColor = "purple"', 'skyColor = purple', '"skyColor" = purple', 'skyColor == "purple"'], c: 0, why: 'Name, then =, then the value. Words need quotes around them.' },
+  { q: 'What happens if you write playerColor = red with no quotes?', opts: ['The game tells you it needs quote marks', 'It works exactly the same', 'The game turns invisible', 'It changes your score'], c: 0, why: 'Without quotes, red looks like a setting name, not a colour — so it gets flagged.' },
+  { q: 'Why use an if/then rule instead of just typing a new number yourself?', opts: ['So the game can react on its own while you play', "Because numbers don't work otherwise", 'To make the code shorter', "There's no real reason"], c: 0, why: 'A rule lets the game respond live, without you having to do anything.' },
+];
+const REVIVE_TYPE = [
+  { task: 'Type a line that makes playerSize at least 80.', check: (c, r, p) => p.length === 0 && c.playerSize >= 80, hint: 'playerSize = 80' },
+  { task: 'Type a line that makes playerColor any colour you like — remember the quotes!', check: (c, r, p) => p.length === 0 && c.playerColor !== DEFAULTS.playerColor, hint: 'playerColor = "green"' },
+  { task: 'Type a line that turns showScore off.', check: (c, r, p) => p.length === 0 && c.showScore === false, hint: 'showScore = false' },
+  { task: 'Type a line with a list of at least 2 falling things.', check: (c, r, p) => p.length === 0 && c.fallingThings.length >= 2, hint: 'fallingThings = ["⭐", "🍩"]' },
+  { task: 'Type a rule: when score is more than 10, make fallSpeed 6.', check: (c, r, p) => p.length === 0 && r.some((x) => x.key === 'score' && (x.op === '>' || x.op === '>=') && x.set === 'fallSpeed'), hint: 'if score > 10 then fallSpeed = 6' },
+  { task: 'Type a line that sets pointsPerCatch to any number.', check: (c, r, p) => p.length === 0 && c.pointsPerCatch !== DEFAULTS.pointsPerCatch, hint: 'pointsPerCatch = 20' },
+];
 
 /* ------------------------------------------------------- the lessons */
 const LESSONS = [
@@ -402,7 +472,7 @@ const keys = new Set();
 const bits = [];
 
 function newGame() {
-  G = { px: W / 2, py: H - 46, score: 0, lives: cfg.startLives, items: [], t: 0, over: false, started: false, chompT: 0, live: Object.assign({}, cfg) };
+  G = { px: W / 2, py: H - 46, score: 0, lives: cfg.startLives, items: [], t: 0, over: false, started: false, chompT: 0, revived: false, live: Object.assign({}, cfg) };
 }
 
 function applyRules() {
@@ -458,7 +528,10 @@ function step_() {
       G.lives--;
       pop(it.x, H - 10, '#ff6b6b');
       popWord(it.x, H - 30, pickOne(MISS_WORDS), '#fff');
-      if (G.lives <= 0) G.over = true;
+      if (G.lives <= 0 && !G.over) {
+        G.over = true; G.started = false;
+        if (!G.revived) setTimeout(openRevive, 400);
+      }
     }
   }
 
@@ -712,6 +785,89 @@ function celebrate() {
   document.body.appendChild(el); setTimeout(() => el.remove(), 1100);
 }
 
+/* ------------------------------------------------------------ revive */
+let reviveActive = null;
+let lastReviveOk = false;
+
+function openRevive() {
+  if (!G || G.revived) return;
+  $('reviveChoice').hidden = false;
+  $('reviveQuiz').hidden = true;
+  $('reviveCode').hidden = true;
+  $('reviveResult').hidden = true;
+  $('reviveWrap').hidden = false;
+  setMascot('yikes', 'Out of hearts! Want one back?');
+}
+
+function startReviveQuiz() {
+  const q = pickOne(REVIVE_QUIZ);
+  reviveActive = { kind: 'quiz', data: q };
+  $('reviveChoice').hidden = true;
+  $('reviveQuiz').hidden = false;
+  $('reviveQText').textContent = q.q;
+  const order = shuffle([0, 1, 2, 3]);
+  const wrap = $('reviveOpts');
+  wrap.innerHTML = '';
+  order.forEach((orig) => {
+    const b = document.createElement('button');
+    b.className = 'ansbtn';
+    b.textContent = q.opts[orig];
+    b.addEventListener('click', () => answerRevive(orig === q.c, q.why, b, wrap));
+    wrap.appendChild(b);
+  });
+}
+
+function startReviveCode() {
+  const t = pickOne(REVIVE_TYPE);
+  reviveActive = { kind: 'code', data: t };
+  $('reviveChoice').hidden = true;
+  $('reviveCode').hidden = false;
+  $('reviveCText').textContent = t.task;
+  const input = $('reviveInput');
+  input.value = '';
+  setTimeout(() => input.focus(), 50);
+}
+
+function checkReviveCode() {
+  const t = reviveActive.data;
+  const raw = $('reviveInput').value.trim();
+  const res = parseCode(raw);
+  const ok = raw.length > 0 && t.check(res.cfg, res.rules, res.problems);
+  finishRevive(ok, ok ? '' : 'A line like this would work: ' + t.hint);
+}
+
+function answerRevive(ok, why, btn, wrap) {
+  for (const b of wrap.children) b.disabled = true;
+  btn.classList.add(ok ? 'right' : 'wrong');
+  setTimeout(() => finishRevive(ok, why), 500);
+}
+
+function finishRevive(ok, explain) {
+  $('reviveChoice').hidden = true;
+  $('reviveQuiz').hidden = true;
+  $('reviveCode').hidden = true;
+  $('reviveResult').hidden = false;
+  G.revived = true;
+  lastReviveOk = ok;
+
+  if (ok) {
+    $('reviveResTitle').textContent = '💜 Heart restored!';
+    $('reviveResText').textContent = explain ? ('Yes! ' + explain) : 'Nice — you earned it. Back in you go.';
+    $('reviveContinueBtn').textContent = 'Keep playing';
+    setMascot('happy', 'Back from the dead!');
+  } else {
+    $('reviveResTitle').textContent = 'Ah, not this time.';
+    $('reviveResText').textContent = explain;
+    $('reviveContinueBtn').textContent = 'Okay';
+    setMascot('idle', 'Good try though.');
+  }
+}
+
+function closeRevive() {
+  $('reviveWrap').hidden = true;
+  if (lastReviveOk) { G.lives = 1; G.over = false; G.started = true; celebrate(); }
+}
+
 /* --------------------------------------------------------------- chaos */
 function chaos() {
   const sizes = [30, 50, 70, 90, 110, 140];
@@ -751,6 +907,11 @@ $('showBtn').addEventListener('click', () => {
   if (!L.hint) return;
   say('info', 'Try this line: <code>' + L.hint.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])) + '</code>');
 });
+$('reviveQuizBtn').addEventListener('click', startReviveQuiz);
+$('reviveCodeBtn').addEventListener('click', startReviveCode);
+$('reviveCheckBtn').addEventListener('click', checkReviveCode);
+$('reviveInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') checkReviveCode(); });
+$('reviveContinueBtn').addEventListener('click', closeRevive);
 
 const first = parseCode($('code').value);
 cfg = first.cfg; rules = first.rules;
